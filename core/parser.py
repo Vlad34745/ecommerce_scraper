@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 def fetch_page_html(url: str, wait_seconds: int = 3) -> str:
     """
-    Завантажує сторінку через headless Chrome (Selenium) і повертає готовий HTML.
-    Використовується замість простого requests, оскільки цільовий сайт
-    блокує прості HTTP-запити антибот-захистом.
+    Loads a page through headless Chrome (Selenium) and returns the rendered HTML.
+    Used instead of a plain requests call, since the target site blocks
+    simple HTTP requests via anti-bot protection.
     """
     options = Options()
     options.add_argument("--headless=new")
@@ -39,6 +39,10 @@ def fetch_page_html(url: str, wait_seconds: int = 3) -> str:
 
 
 def parse_movies(html: str, limit: int = 250) -> list:
+    """
+    Extracts rank, title, release year, rating, and IMDb ID for each movie
+    from the IMDb Top 250 page HTML.
+    """
     soup = BeautifulSoup(html, "html.parser")
     title_elements = soup.find_all("h4", class_="ipc-title__text")
 
@@ -53,7 +57,7 @@ def parse_movies(html: str, limit: int = 250) -> list:
         movie_id_match = re.search(r"/title/(tt\d+)/", href) if href else None
         movie_id = movie_id_match.group(1) if movie_id_match else None
 
-        # Батьківський контейнер, що об'єднує назву, рік і рейтинг цього фільму
+        # Parent container that groups the title, year, and rating for this movie
         container = elem.find_parent("div", class_="sc-a96da33f-0") or elem.find_parent("li")
 
         year = None
@@ -78,10 +82,10 @@ def parse_movies(html: str, limit: int = 250) -> list:
             "movie_id": movie_id,
         })
 
-    # Прибираємо "сміттєві" записи без ID фільму (навігаційні посилання типу "Popular charts")
+    # Filter out non-movie entries without an ID (nav links like "Popular charts")
     movies = [m for m in movies if m["movie_id"] is not None]
 
-    # Перенумеровуємо ранг заново, оскільки частину записів могли прибрати
+    # Re-number the rank since some entries may have been removed
     for new_rank, movie in enumerate(movies, start=1):
         movie["rank"] = new_rank
 
